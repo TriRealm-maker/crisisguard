@@ -12,8 +12,7 @@ export const getPlaces = async (req: Request, res: Response): Promise<void> => {
 
     const places = await getNearbyPlaces(
       parseFloat(lat as string),
-      parseFloat(lng as string),
-      radius ? parseInt(radius as string) : 10000
+      parseFloat(lng as string)
     );
 
     res.json(places);

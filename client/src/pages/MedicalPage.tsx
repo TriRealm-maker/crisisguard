@@ -1,19 +1,23 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
-import { MedicalProfile as MedicalProfileType } from '../types';
-import { 
-  PencilSquareIcon, 
-  CheckIcon, 
-  UserCircleIcon, 
-  PhoneIcon, 
-  PaperClipIcon, 
-  TrashIcon, 
+import { MedicalProfile as MedicalProfileType, MedicalFile } from '../types';
+import { Card, Button } from '../components/ui';
+import { cn } from '../lib/utils';
+import {
+  PencilSquareIcon,
+  CheckIcon,
+  UserCircleIcon,
+  PhoneIcon,
+  TrashIcon,
   ShareIcon,
   DocumentIcon,
   XMarkIcon,
-  ShieldExclamationIcon
+  ShieldExclamationIcon,
+  CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
-import { HeartIcon } from '@heroicons/react/24/solid';
+import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 
 const emptyProfile: MedicalProfileType = {
   fullName: '',
@@ -27,13 +31,17 @@ const emptyProfile: MedicalProfileType = {
   files: [],
 };
 
+const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 export const MedicalPage = () => {
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<MedicalProfileType>(emptyProfile);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareDuration, setShareDuration] = useState('24');
   const [generatedLink, setGeneratedLink] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -52,15 +60,36 @@ export const MedicalPage = () => {
     setProfile({ ...profile, [e.target.name]: e.target.value });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      const result = await api.medical.uploadFile(file);
-      if (result.file) {
-        setProfile(prev => ({ ...prev, files: [...prev.files, result.file] }));
-      }
+  const handleFileUpload = async (file: File) => {
+    const result = await api.medical.uploadFile(file);
+    if (result.file) {
+      setProfile(prev => ({ ...prev, files: [...prev.files, result.file] }));
     }
   };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  }, []);
 
   const deleteFile = async (fileId: string) => {
     await api.medical.deleteFile(fileId);
@@ -76,226 +105,439 @@ export const MedicalPage = () => {
 
   if (loading) {
     return (
-      <div className="animate-pulse max-w-4xl mx-auto p-8 bg-white dark:bg-slate-800 rounded-xl">
-        <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-6"></div>
-        <div className="space-y-4">
-          <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
-          <div className="h-20 bg-slate-200 dark:bg-slate-700 rounded"></div>
-        </div>
+      <div className="max-w-4xl mx-auto p-8">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-4"
+        >
+          <div className="h-8 bg-border-light dark:bg-border-dark rounded w-1/3 animate-pulse" />
+          <div className="h-48 bg-border-light dark:bg-border-dark rounded-2xl animate-pulse" />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-4xl mx-auto pb-24 md:pb-6"
+    >
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
-          <HeartIcon className="h-8 w-8 text-red-500 mr-2" />
-          Medical Emergency ID
+        <h2 className="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark flex items-center">
+          <HeartSolidIcon className="h-8 w-8 text-danger mr-2" />
+          {t('medical.title')}
         </h2>
         <div className="flex space-x-3">
           {!isEditing && (
-            <button
-              onClick={() => setShowShareModal(true)}
-              className="px-4 py-2 rounded-full font-medium flex items-center bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <ShareIcon className="h-5 w-5 mr-2" /> Share
-            </button>
+            <Button onClick={() => setShowShareModal(true)} className="flex items-center">
+              <ShareIcon className="w-4 h-4 mr-2" />
+              {t('medical.share')}
+            </Button>
           )}
-          <button
+          <Button
+            variant={isEditing ? 'primary' : 'secondary'}
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-            className={`px-6 py-2 rounded-full font-medium flex items-center transition-all ${
-              isEditing
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600'
-            }`}
+            className="flex items-center"
           >
-            {isEditing ? <><CheckIcon className="h-5 w-5 mr-2" /> Save</> : <><PencilSquareIcon className="h-5 w-5 mr-2" /> Edit</>}
-          </button>
-        </div>
-      </div>
-
-      <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl overflow-hidden border-t-8 ${
-        isEditing ? 'border-slate-300' : 'border-red-600'
-      }`}>
-        {!isEditing && (
-          <div className="bg-red-50 dark:bg-red-900/20 p-6 border-b border-red-100 dark:border-red-900/30 flex items-start space-x-4">
-            <UserCircleIcon className="h-20 w-20 text-slate-400" />
-            <div>
-              <h3 className="text-3xl font-bold text-slate-900 dark:text-white">{profile.fullName || 'Unknown'}</h3>
-              <div className="mt-2 flex space-x-4">
-                <span className="px-3 py-1 rounded-full text-sm font-bold bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200">
-                  Blood: {profile.bloodType || '--'}
-                </span>
-                <span className="px-3 py-1 rounded-full text-sm font-medium bg-slate-100 dark:bg-slate-700">
-                  DOB: {profile.dob || '--'}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Section title="Personal Information">
-            <Input label="Full Name" name="fullName" value={profile.fullName} onChange={handleChange} isEditing={isEditing} />
-            <Input label="Date of Birth" name="dob" type="date" value={profile.dob} onChange={handleChange} isEditing={isEditing} />
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Blood Type</label>
-              {isEditing ? (
-                <select
-                  name="bloodType"
-                  value={profile.bloodType}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700"
-                >
-                  <option value="">Select...</option>
-                  {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bt => (
-                    <option key={bt} value={bt}>{bt}</option>
-                  ))}
-                </select>
-              ) : (
-                <div className="text-lg font-medium">{profile.bloodType || 'Not specified'}</div>
-              )}
-            </div>
-          </Section>
-
-          <Section title="Emergency Contact">
-            <Input label="Contact Name" name="emergencyContactName" value={profile.emergencyContactName} onChange={handleChange} isEditing={isEditing} />
-            <Input label="Phone Number" name="emergencyContactPhone" value={profile.emergencyContactPhone} onChange={handleChange} isEditing={isEditing} />
-            {!isEditing && profile.emergencyContactPhone && (
-              <a href={`tel:${profile.emergencyContactPhone}`} className="mt-2 inline-flex items-center text-green-600 font-bold">
-                <PhoneIcon className="h-5 w-5 mr-1" /> Call Now
-              </a>
-            )}
-          </Section>
-
-          <Section title="Critical Medical Info" className="md:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <TextArea label="Allergies" name="allergies" value={profile.allergies} onChange={handleChange} isEditing={isEditing} important />
-              <TextArea label="Conditions" name="conditions" value={profile.conditions} onChange={handleChange} isEditing={isEditing} />
-              <TextArea label="Medications" name="medications" value={profile.medications} onChange={handleChange} isEditing={isEditing} />
-            </div>
-          </Section>
-
-          <Section title="Medical Documents" className="md:col-span-2">
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-              <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Upload prescriptions, x-rays, or insurance cards
-                </p>
-                {isEditing && (
-                  <div>
-                    <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.jpg,.jpeg,.png" />
-                    <button onClick={() => fileInputRef.current?.click()} className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 rounded-md flex items-center text-sm">
-                      <PaperClipIcon className="h-4 w-4 mr-1" /> Upload
-                    </button>
-                  </div>
-                )}
-              </div>
-              {profile.files.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
-                  <DocumentIcon className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600" />
-                  <p className="text-slate-400 text-sm">No documents</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {profile.files.map(file => (
-                    <div key={file.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-md border">
-                      <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-5 w-5 text-red-500" />
-                        <div>
-                          <p className="text-sm font-medium">{file.name}</p>
-                          <p className="text-xs text-slate-500">{file.uploadDate} • {file.size}</p>
-                        </div>
-                      </div>
-                      {isEditing && (
-                        <button onClick={() => deleteFile(file.id)} className="text-slate-400 hover:text-red-500">
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </Section>
-        </div>
-      </div>
-
-      {showShareModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Secure Share</h3>
-              <button onClick={() => setShowShareModal(false)}><XMarkIcon className="h-6 w-6" /></button>
-            </div>
-            {!generatedLink ? (
+            {isEditing ? (
               <>
-                <div className="bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded-lg mb-4">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200 flex items-start">
-                    <ShieldExclamationIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-                    Share this link with emergency responders
-                  </p>
-                </div>
-                <div className="mb-4">
-                  <label className="text-sm font-medium mb-2 block">Access Duration</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['1', '12', '24'].map(dur => (
-                      <button key={dur} onClick={() => setShareDuration(dur)}
-                        className={`py-2 rounded-lg border ${shareDuration === dur ? 'bg-blue-600 text-white border-blue-600' : 'border-slate-300'}`}>
-                        {dur}h
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button onClick={generateShareLink} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">
-                  Generate Link
-                </button>
+                <CheckIcon className="w-4 h-4 mr-2" />
+                {t('medical.save')}
               </>
             ) : (
               <>
-                <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg break-all font-mono text-sm mb-4">
-                  {generatedLink}
-                </div>
-                <button onClick={() => { setGeneratedLink(''); setShowShareModal(false); }} className="w-full py-3 bg-slate-800 dark:bg-white text-white dark:text-slate-900 rounded-lg font-bold">
-                  Done
-                </button>
+                <PencilSquareIcon className="w-4 h-4 mr-2" />
+                {t('medical.edit')}
               </>
             )}
+          </Button>
+        </div>
+      </div>
+
+      <Card className="overflow-hidden">
+        <div className={cn(
+          'h-2 bg-gradient-to-r from-danger via-red-500 to-danger',
+          'transition-all duration-500'
+        )} />
+        
+        <div className="p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+            <div className="relative group">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-glow-primary">
+                {profile.fullName ? (
+                  <span className="text-3xl font-bold text-white">
+                    {profile.fullName.charAt(0).toUpperCase()}
+                  </span>
+                ) : (
+                  <UserCircleIcon className="w-12 h-12 text-white/70" />
+                )}
+              </div>
+              {isEditing && (
+                <label className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                  <CloudArrowUpIcon className="w-8 h-8 text-white" />
+                  <input type="file" className="hidden" accept="image/*" />
+                </label>
+              )}
+            </div>
+
+            <div className="flex-1">
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="fullName"
+                  value={profile.fullName}
+                  onChange={handleChange}
+                  placeholder="Enter your name"
+                  className="text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-primary focus:outline-none w-full pb-1"
+                />
+              ) : (
+                <h3 className="text-2xl md:text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
+                  {profile.fullName || t('medical.notSpecified')}
+                </h3>
+              )}
+              
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                {isEditing ? (
+                  <select
+                    name="bloodType"
+                    value={profile.bloodType}
+                    onChange={handleChange}
+                    className="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-sm font-medium"
+                  >
+                    <option value="">{t('medical.bloodType')}</option>
+                    {bloodTypes.map(bt => (
+                      <option key={bt} value={bt}>{bt}</option>
+                    ))}
+                  </select>
+                ) : profile.bloodType ? (
+                  <span className="px-3 py-1.5 rounded-full text-sm font-bold bg-danger/10 text-danger border border-danger/20">
+                    {t('medical.bloodType')}: {profile.bloodType}
+                  </span>
+                ) : null}
+
+                {isEditing ? (
+                  <input
+                    type="date"
+                    name="dob"
+                    value={profile.dob}
+                    onChange={handleChange}
+                    className="px-3 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-sm"
+                  />
+                ) : profile.dob ? (
+                  <span className="px-3 py-1.5 rounded-lg text-sm bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark">
+                    {t('medical.dob')}: {profile.dob}
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-4">
+                {t('medical.personalInfo')}
+              </h4>
+              <div className="space-y-4">
+                <InfoField
+                  label={t('medical.dob')}
+                  value={profile.dob}
+                  isEditing={isEditing}
+                  name="dob"
+                  onChange={handleChange}
+                  type="date"
+                />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-4">
+                {t('medical.emergencyContact')}
+              </h4>
+              <div className="space-y-4">
+                <InfoField
+                  label={t('medical.contactName')}
+                  value={profile.emergencyContactName}
+                  isEditing={isEditing}
+                  name="emergencyContactName"
+                  onChange={handleChange}
+                />
+                <InfoField
+                  label={t('medical.phone')}
+                  value={profile.emergencyContactPhone}
+                  isEditing={isEditing}
+                  name="emergencyContactPhone"
+                  onChange={handleChange}
+                  type="tel"
+                />
+                {!isEditing && profile.emergencyContactPhone && (
+                  <a
+                    href={`tel:${profile.emergencyContactPhone}`}
+                    className="inline-flex items-center text-success font-medium"
+                  >
+                    <PhoneIcon className="w-4 h-4 mr-1" />
+                    Call Now
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-4">
+              {t('medical.criticalInfo')}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CriticalInfoField
+                label={t('medical.allergies')}
+                value={profile.allergies}
+                isEditing={isEditing}
+                name="allergies"
+                onChange={handleChange}
+                important
+              />
+              <CriticalInfoField
+                label={t('medical.conditions')}
+                value={profile.conditions}
+                isEditing={isEditing}
+                name="conditions"
+                onChange={handleChange}
+              />
+              <CriticalInfoField
+                label={t('medical.medications')}
+                value={profile.medications}
+                isEditing={isEditing}
+                name="medications"
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-secondary-light dark:text-text-secondary-dark mb-4">
+              {t('medical.documents')}
+            </h4>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                'border-2 border-dashed rounded-xl p-6 text-center transition-all',
+                isDragging
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border-light dark:border-border-dark hover:border-primary/50',
+                isEditing && 'cursor-pointer'
+              )}
+              onClick={() => isEditing && fileInputRef.current?.click()}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileInput}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <DocumentIcon className={cn(
+                'w-10 h-10 mx-auto mb-2',
+                isDragging ? 'text-primary' : 'text-text-secondary-light dark:text-text-secondary-dark'
+              )} />
+              <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                {isEditing ? t('medical.upload') : 'No documents uploaded'}
+              </p>
+            </div>
+
+            {profile.files.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                {profile.files.map((file: MedicalFile) => (
+                  <motion.div
+                    key={file.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex items-center justify-between p-3 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <DocumentIcon className="w-8 h-8 text-danger" />
+                      <div>
+                        <p className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                          {file.uploadDate} • {file.size}
+                        </p>
+                      </div>
+                    </div>
+                    {isEditing && (
+                      <button
+                        onClick={() => deleteFile(file.id)}
+                        className="p-2 text-text-secondary-light dark:text-text-secondary-dark hover:text-danger transition-colors"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">
+                  Secure Share
+                </h3>
+                <button onClick={() => setShowShareModal(false)}>
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+              
+              {!generatedLink ? (
+                <>
+                  <div className="bg-warning/10 dark:bg-warning/5 p-3 rounded-xl mb-4">
+                    <p className="text-xs text-warning flex items-start">
+                      <ShieldExclamationIcon className="w-4 h-4 mr-2 flex-shrink-0" />
+                      Share this link with emergency responders
+                    </p>
+                  </div>
+                  <div className="mb-4">
+                    <label className="text-sm font-medium mb-2 block">Access Duration</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['1', '12', '24'].map(dur => (
+                        <button
+                          key={dur}
+                          onClick={() => setShareDuration(dur)}
+                          className={cn(
+                            'py-2 rounded-lg border transition-all',
+                            shareDuration === dur
+                              ? 'bg-primary text-white border-primary'
+                              : 'border-border-light dark:border-border-dark'
+                          )}
+                        >
+                          {dur}h
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Button onClick={generateShareLink} className="w-full">
+                    Generate Link
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="bg-surface-light dark:bg-background-dark p-3 rounded-xl break-all font-mono text-sm mb-4 border border-border-light dark:border-border-dark">
+                    {generatedLink}
+                  </div>
+                  <Button
+                    onClick={() => { setGeneratedLink(''); setShowShareModal(false); }}
+                    className="w-full"
+                  >
+                    Done
+                  </Button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+function InfoField({
+  label,
+  value,
+  isEditing,
+  name,
+  onChange,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  isEditing: boolean;
+  name: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-text-secondary-light dark:text-text-secondary-dark mb-1">
+        {label}
+      </label>
+      {isEditing ? (
+        <input
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+      ) : (
+        <div className="text-text-primary-light dark:text-text-primary-dark font-medium">
+          {value || <span className="text-text-secondary-light dark:text-text-secondary-dark italic">Add info</span>}
         </div>
       )}
     </div>
   );
-};
+}
 
-const Section = ({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) => (
-  <div className={`space-y-4 ${className}`}>
-    <h4 className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-700 pb-2">{title}</h4>
-    {children}
-  </div>
-);
-
-const Input = ({ label, name, value, onChange, isEditing, type = 'text' }: any) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium mb-1">{label}</label>
-    {isEditing ? (
-      <input type={type} name={name} value={value} onChange={onChange}
-        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" />
-    ) : (
-      <div className="text-lg">{value || 'Not specified'}</div>
-    )}
-  </div>
-);
-
-const TextArea = ({ label, name, value, onChange, isEditing, important }: any) => (
-  <div className={`mb-4 ${!isEditing && important && value ? 'bg-red-50 dark:bg-red-900/20 p-3 rounded-lg' : ''}`}>
-    <label className={`block text-sm font-medium mb-1 ${!isEditing && important ? 'text-red-800 dark:text-red-300' : ''}`}>{label}</label>
-    {isEditing ? (
-      <textarea name={name} value={value} onChange={onChange} rows={3}
-        className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700" />
-    ) : (
-      <div className={`whitespace-pre-wrap ${important ? 'font-bold text-red-700 dark:text-red-400' : ''}`}>{value || 'None'}</div>
-    )}
-  </div>
-);
+function CriticalInfoField({
+  label,
+  value,
+  isEditing,
+  name,
+  onChange,
+  important,
+}: {
+  label: string;
+  value: string;
+  isEditing: boolean;
+  name: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  important?: boolean;
+}) {
+  return (
+    <div className={cn(!isEditing && value && important && 'bg-danger/5 dark:bg-danger/10 p-3 rounded-xl')}>
+      <label className={cn(
+        'block text-xs font-medium mb-1',
+        important ? 'text-danger' : 'text-text-secondary-light dark:text-text-secondary-dark'
+      )}>
+        {label}
+      </label>
+      {isEditing ? (
+        <textarea
+          name={name}
+          value={value}
+          onChange={onChange}
+          rows={2}
+          className="w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+        />
+      ) : value ? (
+        <div className={cn(
+          'font-semibold whitespace-pre-wrap',
+          important ? 'text-danger' : 'text-text-primary-light dark:text-text-primary-dark'
+        )}>
+          {value}
+        </div>
+      ) : (
+        <span className="text-text-secondary-light dark:text-text-secondary-dark italic text-sm">
+          Add info
+        </span>
+      )}
+    </div>
+  );
+}

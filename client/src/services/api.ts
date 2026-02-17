@@ -43,6 +43,10 @@ export const api = {
       const params = new URLSearchParams({ lat: lat.toString(), lng: lng.toString() });
       if (radius) params.append('radius', radius.toString());
       const res = await fetch(`${API_BASE}/places?${params}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch places');
+      }
       return res.json();
     },
   },
