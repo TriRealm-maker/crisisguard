@@ -1,4 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://crisisguard-backend.onrender.com/api';
+
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('token');
