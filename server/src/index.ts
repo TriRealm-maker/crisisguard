@@ -23,16 +23,19 @@ const app: Express = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'https://crisisguard.vercel.app',
-  'https://crisisguard-oecain7yq-ayushs-projects-0cebdcbd.vercel.app',
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (Postman, curl, mobile apps)
+      // Allow Postman, curl, mobile apps
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      // Allow localhost + main prod + all Vercel previews
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
         return callback(null, true);
       }
 
@@ -41,8 +44,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
