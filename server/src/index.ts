@@ -20,13 +20,29 @@ dotenv.config();
 
 const app: Express = express();
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://crisisguard.vercel.app"
-  ],
-  credentials: true,
-}));
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://crisisguard.vercel.app',
+  'https://crisisguard-oecain7yq-ayushs-projects-0cebdcbd.vercel.app',
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (Postman, curl, mobile apps)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
+
+app.options('*', cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
