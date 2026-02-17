@@ -9,12 +9,22 @@ import placesRoutes from './routes/placesRoutes';
 import predictionRoutes from './routes/predictionRoutes';
 import medicalRoutes from './routes/medicalRoutes';
 
+// Required environment variables:
+// MONGODB_URI — MongoDB Atlas connection string
+// JWT_SECRET — any long random string
+// NODE_ENV — "production"
+// PORT — set automatically by Render (do not hardcode)
+// OPENWEATHER_API_KEY — from openweathermap.org
+
 dotenv.config();
 
 const app: Express = express();
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: [
+    "http://localhost:5173",
+    "https://crisisguard.vercel.app"
+  ],
   credentials: true,
 }));
 
