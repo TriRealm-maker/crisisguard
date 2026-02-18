@@ -49,10 +49,13 @@ const createUserMarker = () => {
 const createServiceMarker = (type: string) => {
   const colors: Record<string, string> = {
     hospital: '#22C55E',
+    clinic: '#22C55E',
+    doctors: '#22C55E',
     police: '#6366F1',
     fire: '#EF4444',
-    pharmacy: '#A855F7',
-    shelter: '#F59E0B',
+    pharmacy: '#06B6D4',
+    ambulance: '#F97316',
+    shelter: '#A855F7',
     other: '#6B7280',
   };
   const color = colors[type] || colors.other;
@@ -72,13 +75,16 @@ const createServiceMarker = (type: string) => {
   });
 };
 
-type FilterType = 'all' | 'hospital' | 'police' | 'fire';
+type FilterType = 'all' | 'medical' | 'pharmacy' | 'police' | 'fire' | 'ambulance' | 'shelter';
 
 const filters: { type: FilterType; label: string }[] = [
   { type: 'all', label: 'map.all' },
-  { type: 'hospital', label: 'map.hospitals' },
+  { type: 'medical', label: 'map.medical' },
+  { type: 'pharmacy', label: 'map.pharmacies' },
   { type: 'police', label: 'map.police' },
   { type: 'fire', label: 'map.fire' },
+  { type: 'ambulance', label: 'map.ambulance' },
+  { type: 'shelter', label: 'map.shelters' },
 ];
 
 interface ErrorStateProps {
@@ -175,7 +181,7 @@ export const MapPage = ({ coords }: Props) => {
     setLoading(true);
     setErrorType(null);
     
-    api.places.getNearby(coords.lat, coords.lng)
+    api.places.getNearby(coords.lat, coords.lng, 5000)
       .then((data) => {
         if (data.length === 0 && !hasRetried.current) {
           hasRetried.current = true;
@@ -207,7 +213,11 @@ export const MapPage = ({ coords }: Props) => {
   const filteredPlaces = useMemo(() => {
     let result = places;
     if (activeFilter !== 'all') {
-      result = result.filter(p => p.type === activeFilter);
+      if (activeFilter === 'medical') {
+        result = result.filter(p => p.type === 'hospital' || p.type === 'clinic' || p.type === 'doctors');
+      } else {
+        result = result.filter(p => p.type === activeFilter);
+      }
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -224,12 +234,36 @@ export const MapPage = ({ coords }: Props) => {
 
   const getBadgeStyle = (type: string) => {
     switch (type) {
-      case 'hospital': return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
-      case 'police': return 'bg-primary/10 text-primary dark:text-primary-light border-primary/20';
-      case 'fire': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
-      case 'pharmacy': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
-      case 'shelter': return 'bg-warning/10 text-warning border-warning/20';
-      default: return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20';
+      case 'hospital':
+      case 'clinic':
+      case 'doctors':
+        return 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
+      case 'police':
+        return 'bg-primary/10 text-primary dark:text-primary-light border-primary/20';
+      case 'fire':
+        return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+      case 'pharmacy':
+        return 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20';
+      case 'ambulance':
+        return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20';
+      case 'shelter':
+        return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+      default:
+        return 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20';
+    }
+  };
+
+  const getBadgeLabel = (type: string) => {
+    switch (type) {
+      case 'hospital': return 'Hospital';
+      case 'clinic': return 'Clinic';
+      case 'doctors': return 'Doctor';
+      case 'police': return 'Police';
+      case 'fire': return 'Fire';
+      case 'pharmacy': return 'Pharmacy';
+      case 'ambulance': return 'Ambulance';
+      case 'shelter': return 'Shelter';
+      default: return type;
     }
   };
 
@@ -267,7 +301,7 @@ export const MapPage = ({ coords }: Props) => {
                 <div className="min-w-[180px] p-1">
                   <h3 className="font-bold text-slate-900">{place.title}</h3>
                   <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${getBadgeStyle(place.type)}`}>
-                    {place.type}
+                    {getBadgeLabel(place.type)}
                   </span>
                   <p className="text-sm text-slate-600 mt-1">{place.address}</p>
                   {place.phoneNumber && (
@@ -377,7 +411,7 @@ export const MapPage = ({ coords }: Props) => {
                       </h3>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${getBadgeStyle(place.type)}`}>
-                          {place.type}
+                          {getBadgeLabel(place.type)}
                         </span>
                         {place.distance !== undefined && (
                           <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
@@ -416,7 +450,11 @@ export const MapPage = ({ coords }: Props) => {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 rounded-full" />
-            <span className="text-text-secondary-light dark:text-text-secondary-dark">Hospital</span>
+            <span className="text-text-secondary-light dark:text-text-secondary-dark">Medical</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-cyan-500 rounded-full" />
+            <span className="text-text-secondary-light dark:text-text-secondary-dark">Pharmacy</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-primary rounded-full" />
@@ -425,6 +463,14 @@ export const MapPage = ({ coords }: Props) => {
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-danger rounded-full" />
             <span className="text-text-secondary-light dark:text-text-secondary-dark">Fire</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-orange-500 rounded-full" />
+            <span className="text-text-secondary-light dark:text-text-secondary-dark">Ambulance</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-purple-500 rounded-full" />
+            <span className="text-text-secondary-light dark:text-text-secondary-dark">Shelter</span>
           </div>
         </div>
       </div>

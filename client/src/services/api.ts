@@ -1,6 +1,6 @@
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  'https://crisisguard-backend.onrender.com/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL
+  ? `${import.meta.env.VITE_API_BASE_URL}/api`
+  : 'http://localhost:5000/api';
 
 
 const getAuthHeaders = (): Record<string, string> => {
@@ -42,9 +42,14 @@ export const api = {
   },
 
   places: {
-    getNearby: async (lat: number, lng: number, radius?: number) => {
+    getNearby: async (lat: number, lng: number, radius?: number, types?: string[]) => {
       const params = new URLSearchParams({ lat: lat.toString(), lng: lng.toString() });
       if (radius) params.append('radius', radius.toString());
+      if (types && types.length > 0) {
+        params.append('types', types.join(','));
+      } else {
+        params.append('types', 'hospital,pharmacy,police,fire_station,atm,gas_station');
+      }
       const res = await fetch(`${API_BASE}/places?${params}`);
       if (!res.ok) {
         const errorData = await res.json();

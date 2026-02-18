@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Express } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import connectDB from './config/db';
 import authRoutes from './routes/authRoutes';
@@ -15,8 +17,7 @@ import medicalRoutes from './routes/medicalRoutes';
 // NODE_ENV — "production"
 // PORT — set automatically by Render (do not hardcode)
 // OPENWEATHER_API_KEY — from openweathermap.org
-
-dotenv.config();
+// GROQ_API_KEY — from console.groq.com (free, no credit card)
 
 const app: Express = express();
 

@@ -42,7 +42,7 @@ export interface MedicalProfile {
 export interface NearbyPlace {
   id: string;
   title: string;
-  type: 'hospital' | 'police' | 'fire' | 'pharmacy' | 'shelter' | 'other';
+  type: 'hospital' | 'clinic' | 'doctors' | 'police' | 'fire' | 'pharmacy' | 'ambulance' | 'shelter' | 'other';
   lat: number;
   lng: number;
   address: string;

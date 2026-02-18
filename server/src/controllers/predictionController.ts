@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getDisasterPrediction, getDisasterGuide } from '../services/ollamaService';
+import { getDisasterPrediction, getDisasterGuide } from '../services/aiService';
 
 export const getPrediction = async (req: Request, res: Response): Promise<void> => {
   try {

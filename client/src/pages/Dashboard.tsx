@@ -248,28 +248,28 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
                     <div className="p-2 rounded-xl bg-blue-500/20">
                       <CloudIcon className="h-5 w-5 text-blue-400" />
                     </div>
-                    <span className="text-sm font-medium text-white/70">{t('dashboard.weather')}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">{t('dashboard.weather')}</span>
                   </div>
-                  <div className="text-3xl font-bold">
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">
                     <Counter value={parseNumber(data?.temperature || '0')} suffix="°" />
                   </div>
-                  <div className="text-sm text-white/50 capitalize">{data?.condition || '--'}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">{data?.condition || '--'}</div>
                 </GlassCard>
 
                 <GlassCard 
                   hover 
-                  className={cn('p-4', data && getAQIBgColor(getAqiNumber(data.aqi).toString()))}
+                  className="p-4"
                 >
                   <div className="flex items-center space-x-3 mb-2">
-                    <div className={cn('p-2 rounded-xl', data && getAQIBgColor(getAqiNumber(data.aqi).toString()).replace('/10', '/20'))}>
-                      <ExclamationTriangleIcon className={cn('h-5 w-5', data && getAQIColor(getAqiNumber(data.aqi).toString()))} />
+                    <div className="p-2 rounded-xl bg-purple-500/20">
+                      <ExclamationTriangleIcon className="h-5 w-5 text-purple-400" />
                     </div>
-                    <span className="text-sm font-medium text-white/70">{t('dashboard.airQuality')}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">{t('dashboard.airQuality')}</span>
                   </div>
-                  <div className={cn('text-3xl font-bold', data && getAQIColor(getAqiNumber(data.aqi).toString()))}>
+                  <div className="text-3xl font-bold text-purple-500 dark:text-white">
                     {data?.aqi || '--'}
                   </div>
-                  <div className="text-sm text-white/50">AQI Index</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">AQI Index</div>
                 </GlassCard>
 
                 <GlassCard hover className="p-4">
@@ -277,12 +277,12 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
                     <div className="p-2 rounded-xl bg-purple-500/20">
                       <BoltIcon className="h-5 w-5 text-purple-400" />
                     </div>
-                    <span className="text-sm font-medium text-white/70">{t('dashboard.humidity')}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-300">{t('dashboard.humidity')}</span>
                   </div>
-                  <div className="text-3xl font-bold">
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">
                     <Counter value={getHumidityValue(data?.humidity || '0')} suffix="%" />
                   </div>
-                  <div className="text-sm text-white/50">Relative Humidity</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Relative Humidity</div>
                 </GlassCard>
               </>
             )}

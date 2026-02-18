@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-export interface NearbyPlace {
+export interface Place {
   id: string;
   title: string;
-  type: 'hospital' | 'police' | 'fire' | 'pharmacy' | 'shelter' | 'other';
+  type: string;
   lat: number;
   lng: number;
   address: string;
@@ -12,22 +12,37 @@ export interface NearbyPlace {
   distance?: number;
 }
 
-interface CacheEntry {
-  data: NearbyPlace[];
-  timestamp: number;
+interface OverpassElement {
+  type: 'node' | 'way' | 'relation';
+  id: number;
+  lat?: number;
+  lon?: number;
+  center?: {
+    lat: number;
+    lon: number;
+  };
+  tags?: Record<string, string>;
 }
+
+interface OverpassResponse {
+  elements: OverpassElement[];
+}
+
+const TYPE_TO_AMENITY_MAP: Record<string, string[]> = {
+  hospital: ['hospital', 'clinic', 'doctors'],
+  pharmacy: ['pharmacy'],
+  police: ['police'],
+  fire_station: ['fire_station'],
+  atm: ['atm', 'bank'],
+  gas_station: ['fuel'],
+};
 
 const OVERPASS_MIRRORS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-  'https://overpass.openstreetmap.ru/api/interpreter',
 ];
 
-const CACHE_DURATION = 5 * 60 * 1000;
-const cache = new Map<string, CacheEntry>();
-
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -38,131 +53,174 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-const getCacheKey = (lat: number, lng: number): string => {
-  return `${lat.toFixed(4)},${lng.toFixed(4)}`;
-};
-
-const getFromCache = (lat: number, lng: number): NearbyPlace[] | null => {
-  const key = getCacheKey(lat, lng);
-  const entry = cache.get(key);
+const buildOverpassQuery = (lat: number, lng: number, radius: number, types: string[]): string => {
+  const amenities: string[] = [];
   
-  if (entry && Date.now() - entry.timestamp < CACHE_DURATION) {
-    console.log('Returning cached results for', key);
-    return entry.data;
+  for (const type of types) {
+    const typeAmenities = TYPE_TO_AMENITY_MAP[type];
+    if (typeAmenities) {
+      amenities.push(...typeAmenities);
+    }
   }
+
+  if (amenities.length === 0) {
+    return '';
+  }
+
+  const nodeLines = amenities.map(a => `  node["amenity"="${a}"](around:${radius},${lat},${lng});`);
+  const wayLines = amenities.map(a => `  way["amenity"="${a}"](around:${radius},${lat},${lng});`);
+
+  const query = `[out:json][timeout:30];
+(
+${nodeLines.join('\n')}
+${wayLines.join('\n')}
+);
+out center tags;`;
+
+  console.log('Generated Overpass query:');
+  console.log(query);
+
+  return query;
+};
+
+const extractPlaceName = (tags: Record<string, string> | undefined): string => {
+  if (!tags) return 'Unknown';
+  return tags.name || tags.name_en || tags.operator || 'Unnamed';
+};
+
+const extractVicinity = (tags: Record<string, string> | undefined): string => {
+  if (!tags) return 'Address not available';
   
-  cache.delete(key);
-  return null;
+  const parts: string[] = [];
+  
+  if (tags['addr:housenumber']) parts.push(tags['addr:housenumber']);
+  if (tags['addr:street']) parts.push(tags['addr:street']);
+  if (tags['addr:city']) parts.push(tags['addr:city']);
+  else if (tags['addr:town']) parts.push(tags['addr:town']);
+  else if (tags['addr:village']) parts.push(tags['addr:village']);
+  
+  if (parts.length > 0) return parts.join(', ');
+  
+  return tags.city || tags.town || tags.state || 'Address not available';
 };
 
-const saveToCache = (lat: number, lng: number, data: NearbyPlace[]): void => {
-  const key = getCacheKey(lat, lng);
-  cache.set(key, { data, timestamp: Date.now() });
+const mapOsmTypeToFrontend = (amenity: string): string => {
+  if (['hospital', 'clinic', 'doctors'].includes(amenity)) return 'hospital';
+  if (amenity === 'pharmacy') return 'pharmacy';
+  if (amenity === 'police') return 'police';
+  if (amenity === 'fire_station') return 'fire';
+  if (['atm', 'bank'].includes(amenity)) return 'atm';
+  if (amenity === 'fuel') return 'gas_station';
+  return 'other';
 };
 
-const fetchFromOverpass = async (lat: number, lng: number, radius: number = 5000): Promise<NearbyPlace[]> => {
-  const overpassQuery = `
-    [out:json][timeout:20];
-    (
-      node["amenity"="hospital"](around:${radius},${lat},${lng});
-      node["amenity"="police"](around:${radius},${lat},${lng});
-      node["amenity"="fire_station"](around:${radius},${lat},${lng});
-    );
-    out body;
-  `;
+const fetchFromOverpass = async (
+  lat: number,
+  lng: number,
+  radius: number,
+  types: string[]
+): Promise<Place[]> => {
+  const query = buildOverpassQuery(lat, lng, radius, types);
+  
+  if (!query) {
+    console.log('No valid amenity types to search for');
+    return [];
+  }
 
   let lastError: Error | null = null;
+  let lastErrorResponse: unknown = null;
 
   for (const mirror of OVERPASS_MIRRORS) {
     try {
-      console.log(`Trying Overpass mirror: ${mirror}`);
-      
-      const response = await axios.post(
+      console.log(`Querying Overpass mirror: ${mirror}`);
+
+      const response = await axios.post<OverpassResponse>(
         mirror,
-        `data=${encodeURIComponent(overpassQuery)}`,
+        `data=${encodeURIComponent(query)}`,
         {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          timeout: 15000,
+          timeout: 30000,
         }
       );
 
-      console.log(`Success from ${mirror}`);
-      
-      const places: NearbyPlace[] = [];
-      const elements = response.data.elements || [];
+      console.log(`Overpass returned ${response.data.elements?.length || 0} elements`);
 
-      for (const element of elements) {
-        const placeLat = element.lat || element.center?.lat;
-        const placeLng = element.lng || element.center?.lng;
+      const places: Place[] = [];
+      const seenIds = new Set<string>();
 
-        if (!placeLat || !placeLng) continue;
+      for (const element of response.data.elements || []) {
+        const latVal = element.lat ?? element.center?.lat;
+        const lonVal = element.lon ?? element.center?.lon;
+
+        if (!latVal || !lonVal) continue;
 
         const tags = element.tags || {};
         const amenity = tags.amenity || 'other';
 
-        let type: NearbyPlace['type'] = 'other';
-        if (amenity === 'hospital') type = 'hospital';
-        else if (amenity === 'police') type = 'police';
-        else if (amenity === 'fire_station') type = 'fire';
+        const placeType = mapOsmTypeToFrontend(amenity);
+        const uniqueId = `${latVal.toFixed(5)},${lonVal.toFixed(5)}`;
 
-        const name = tags.name || tags.operator || `${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        if (seenIds.has(uniqueId)) continue;
+        seenIds.add(uniqueId);
+
+        const distance = calculateDistance(lat, lng, latVal, lonVal);
 
         places.push({
           id: `place-${element.id}`,
-          title: name,
-          type,
-          lat: placeLat,
-          lng: placeLng,
-          address: tags['addr:street'] ? 
-            `${tags['addr:housenumber'] || ''} ${tags['addr:street']}`.trim() : 
-            tags.city || tags.state || 'Address not available',
+          title: extractPlaceName(tags),
+          type: placeType,
+          lat: latVal,
+          lng: lonVal,
+          address: extractVicinity(tags),
           phoneNumber: tags.phone || tags['contact:phone'],
-          operatingHours: tags.opening_hours || '24/7',
-          distance: calculateDistance(lat, lng, placeLat, placeLng),
+          operatingHours: tags.opening_hours,
+          distance,
         });
       }
 
       return places
-        .filter(p => p.distance !== undefined && p.distance < 50)
+        .filter(p => p.distance !== undefined && p.distance * 1000 <= radius)
         .sort((a, b) => (a.distance || 0) - (b.distance || 0))
-        .slice(0, 20);
-
+        .slice(0, 50);
     } catch (error) {
       lastError = error as Error;
       
       if (axios.isAxiosError(error)) {
         console.log(`Mirror ${mirror} failed:`, error.code, error.message);
+        console.log('Full error response:', error.response?.data);
+        lastErrorResponse = error.response?.data;
         
-        if (error.response) {
-          console.log(`Status: ${error.response.status}`);
-        }
-        
-        if (error.response?.status === 429 || error.code === 'ECONNABORTED' || error.response?.status === 504) {
-          console.log(`Moving to next mirror...`);
+        if (error.response?.status === 429 || error.response?.status === 504) {
+          console.log('Rate limited or timeout, trying next mirror...');
           continue;
         }
       }
       
-      console.log(`Non-retryable error from ${mirror}, trying next...`);
+      console.log(`Error from ${mirror}, trying next...`);
       continue;
     }
   }
 
   console.error('All Overpass mirrors failed:', lastError?.message);
-  throw new Error('OVERPASS_ALL_MIRRORS_FAILED');
+  console.error('Last error response:', lastErrorResponse);
+  return [];
 };
 
-export const getNearbyPlaces = async (lat: number, lng: number): Promise<NearbyPlace[]> => {
-  const cached = getFromCache(lat, lng);
-  if (cached) {
-    return cached;
-  }
+export async function findNearbyPlaces(
+  latitude: number,
+  longitude: number,
+  types: string[],
+  radius: number = 5000
+): Promise<Place[]> {
+  console.log(`findNearbyPlaces called: lat=${latitude}, lng=${longitude}, types=${types.join(', ')}, radius=${radius}`);
 
-  const places = await fetchFromOverpass(lat, lng);
-  
-  if (places.length > 0) {
-    saveToCache(lat, lng, places);
+  try {
+    const places = await fetchFromOverpass(latitude, longitude, radius, types);
+    
+    console.log(`Total places found: ${places.length}`);
+    return places;
+  } catch (error) {
+    console.error('Error fetching places:', error);
+    return [];
   }
-  
-  return places;
-};
+}

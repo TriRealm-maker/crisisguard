@@ -47,6 +47,15 @@
     @apply shadow-card hover:shadow-card-hover transition-all duration-300;
   }
 
+  .light-mode-glass-card {
+    @apply text-gray-900;
+  }
+
+  .light-mode-glass-card .text-white\/70,
+  .light-mode-glass-card .text-white\/50 {
+    @apply text-gray-700;
+  }
+
   .noise-overlay {
     position: relative;
   }
