@@ -1,1 +1,10 @@
-{"outputDirectory":"client/dist","rewrites":[{"source":"/(.*)","destination":"/index.html"}]}
+{
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
