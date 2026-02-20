@@ -16,6 +16,7 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
   WifiIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 
 interface Props {
@@ -167,6 +168,8 @@ export const MapPage = ({ coords }: Props) => {
   const [showPanel, setShowPanel] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loadingAddresses, setLoadingAddresses] = useState<Record<string, boolean>>({});
+  const [resolvedAddresses, setResolvedAddresses] = useState<Record<string, string>>({});
   const mapRef = useRef<L.Map | null>(null);
   const hasRetried = useRef(false);
 
@@ -229,6 +232,39 @@ export const MapPage = ({ coords }: Props) => {
   const flyToPlace = (place: NearbyPlace) => {
     if (mapRef.current && place.lat && place.lng) {
       mapRef.current.flyTo([place.lat, place.lng], 16, { duration: 1 });
+    }
+  };
+
+  const fetchAddress = async (placeId: string, lat: number, lng: number) => {
+    if (loadingAddresses[placeId] || resolvedAddresses[placeId]) return;
+    
+    setLoadingAddresses(prev => ({ ...prev, [placeId]: true }));
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+        {
+          headers: { 'User-Agent': 'CrisisGuardApp/1.0' },
+        }
+      );
+      const data = await response.json();
+      const address = data.address || {};
+      const parts: string[] = [];
+      
+      if (address.road) parts.push(address.road);
+      if (address.suburb) parts.push(address.suburb);
+      if (address.city) parts.push(address.city);
+      else if (address.town) parts.push(address.town);
+      else if (address.village) parts.push(address.village);
+      if (address.postcode) parts.push(address.postcode);
+      
+      const resolvedAddress = parts.length > 0 ? parts.join(', ') : 'Address not available';
+      setResolvedAddresses(prev => ({ ...prev, [placeId]: resolvedAddress }));
+    } catch (error) {
+      console.error('Reverse geocoding failed:', error);
+      setResolvedAddresses(prev => ({ ...prev, [placeId]: 'Address not available' }));
+    } finally {
+      setLoadingAddresses(prev => ({ ...prev, [placeId]: false }));
     }
   };
 
@@ -303,12 +339,33 @@ export const MapPage = ({ coords }: Props) => {
                   <span className={`inline-block px-2 py-0.5 text-xs rounded-full font-medium border ${getBadgeStyle(place.type)}`}>
                     {getBadgeLabel(place.type)}
                   </span>
-                  <p className="text-sm text-slate-600 mt-1">{place.address}</p>
+                  {place.address ? (
+                    <p className="text-sm text-slate-600 mt-1">{place.address}</p>
+                  ) : loadingAddresses[place.id] ? (
+                    <p className="text-sm text-slate-400 mt-1 italic">Loading address...</p>
+                  ) : resolvedAddresses[place.id] ? (
+                    <p className="text-sm text-slate-600 mt-1">{resolvedAddresses[place.id]}</p>
+                  ) : (
+                    <p 
+                      className="text-sm text-slate-400 mt-1 cursor-pointer hover:underline"
+                      onClick={() => fetchAddress(place.id, place.lat!, place.lng!)}
+                    >
+                      Tap to load address
+                    </p>
+                  )}
                   {place.phoneNumber && (
                     <a href={`tel:${place.phoneNumber}`} className="text-primary text-sm flex items-center mt-1">
                       <PhoneIcon className="h-4 w-4 mr-1" /> {place.phoneNumber}
                     </a>
                   )}
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary text-sm flex items-center mt-2 hover:underline"
+                  >
+                    <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-1" /> Get Directions
+                  </a>
                 </div>
               </Popup>
             </Marker>

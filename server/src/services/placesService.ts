@@ -89,7 +89,7 @@ const extractPlaceName = (tags: Record<string, string> | undefined): string => {
 };
 
 const extractVicinity = (tags: Record<string, string> | undefined): string => {
-  if (!tags) return 'Address not available';
+  if (!tags) return '';
   
   const parts: string[] = [];
   
@@ -101,7 +101,7 @@ const extractVicinity = (tags: Record<string, string> | undefined): string => {
   
   if (parts.length > 0) return parts.join(', ');
   
-  return tags.city || tags.town || tags.state || 'Address not available';
+  return tags.city || tags.town || tags.state || '';
 };
 
 const mapOsmTypeToFrontend = (amenity: string): string => {
@@ -164,6 +164,7 @@ const fetchFromOverpass = async (
         seenIds.add(uniqueId);
 
         const distance = calculateDistance(lat, lng, latVal, lonVal);
+        const address = extractVicinity(tags);
 
         places.push({
           id: `place-${element.id}`,
@@ -171,17 +172,19 @@ const fetchFromOverpass = async (
           type: placeType,
           lat: latVal,
           lng: lonVal,
-          address: extractVicinity(tags),
+          address: address,
           phoneNumber: tags.phone || tags['contact:phone'],
           operatingHours: tags.opening_hours,
           distance,
         });
       }
 
-      return places
+      const filteredPlaces = places
         .filter(p => p.distance !== undefined && p.distance * 1000 <= radius)
         .sort((a, b) => (a.distance || 0) - (b.distance || 0))
         .slice(0, 50);
+
+      return filteredPlaces;
     } catch (error) {
       lastError = error as Error;
       
