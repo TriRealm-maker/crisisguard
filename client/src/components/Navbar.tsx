@@ -13,6 +13,7 @@ import {
   BookOpenIcon,
   ArrowRightOnRectangleIcon,
   ChevronDownIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
   { path: '/prediction', label: 'nav.prediction', icon: ChartBarIcon },
   { path: '/medical', label: 'nav.medical', icon: HeartIcon },
   { path: '/guides', label: 'nav.guides', icon: BookOpenIcon },
+  { path: '/settings', label: 'nav.settings', icon: Cog6ToothIcon },
 ];
 
 const languages = [

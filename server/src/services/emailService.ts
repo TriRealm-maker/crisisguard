@@ -123,3 +123,66 @@ export const sendPasswordResetEmail = async (email: string, name: string, token:
     html: passwordResetEmailHtml(name, resetLink),
   });
 };
+
+const sosEmailHtml = (userName: string, lat: number, lng: number, mapsLink: string, timestamp: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <tr>
+      <td style="padding: 40px 30px;">
+        <h1 style="margin: 0 0 20px; color: #dc2626; font-size: 28px; font-weight: 700;">🆘 SOS ALERT</h1>
+        <p style="margin: 0 0 20px; color: #4a4a68; font-size: 16px; line-height: 1.6;">
+          <strong>${userName}</strong> has triggered an SOS emergency alert.
+        </p>
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h2 style="margin: 0 0 15px; color: #dc2626; font-size: 18px; font-weight: 600;">Location Information</h2>
+          <p style="margin: 0 0 10px; color: #4a4a68; font-size: 14px;">
+            <strong>GPS Coordinates:</strong><br>
+            Latitude: ${lat}<br>
+            Longitude: ${lng}
+          </p>
+          <p style="margin: 0 0 10px; color: #4a4a68; font-size: 14px;">
+            <strong>Google Maps:</strong><br>
+            <a href="${mapsLink}" style="color: #e94560; word-break: break-all;">${mapsLink}</a>
+          </p>
+          <p style="margin: 0; color: #4a4a68; font-size: 14px;">
+            <strong>Timestamp:</strong><br>
+            ${timestamp}
+          </p>
+        </div>
+        <p style="margin: 20px 0; color: #4a4a68; font-size: 14px; line-height: 1.6;">
+          Please respond immediately if you are nearby or can provide assistance.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="margin: 0; color: #8a8aa3; font-size: 12px; text-align: center;">
+          This SOS was sent via CrisisGuard AI
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+
+export const sendSOSEmail = async (
+  recipientEmail: string,
+  userName: string,
+  lat: number,
+  lng: number,
+  mapsLink: string,
+  timestamp: string
+): Promise<void> => {
+  const transporter = createTransporter();
+  
+  await transporter.sendMail({
+    from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
+    to: recipientEmail,
+    subject: '🆘 SOS ALERT',
+    html: sosEmailHtml(userName, lat, lng, mapsLink, timestamp),
+  });
+};

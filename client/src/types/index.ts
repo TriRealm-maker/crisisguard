@@ -52,3 +52,9 @@ export interface NearbyPlace {
 }
 
 export type DisasterType = 'earthquake' | 'flood' | 'fire' | 'hurricane' | 'tornado' | 'tsunami';
+
+export interface EmergencyContact {
+  name: string;
+  phone: string;
+  email: string;
+}

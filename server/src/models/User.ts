@@ -1,6 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export interface IEmergencyContact {
+  name: string;
+  phone: string;
+  email: string;
+}
+
 export interface IUser extends Document {
   email: string;
   password: string;
@@ -11,6 +17,7 @@ export interface IUser extends Document {
   verificationTokenExpiry: Date | undefined;
   resetPasswordToken: string | undefined;
   resetPasswordTokenExpiry: Date | undefined;
+  emergencyContacts: IEmergencyContact[];
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -55,6 +62,20 @@ const userSchema = new Schema<IUser>({
   resetPasswordTokenExpiry: {
     type: Date,
     default: undefined,
+  },
+  emergencyContacts: {
+    type: [{
+      name: { type: String, required: true, trim: true },
+      phone: { type: String, required: true, trim: true },
+      email: { type: String, required: true, trim: true, lowercase: true },
+    }],
+    default: [],
+    validate: {
+      validator: function(v: IEmergencyContact[]) {
+        return v.length <= 5;
+      },
+      message: 'Maximum 5 emergency contacts allowed',
+    },
   },
 });
 

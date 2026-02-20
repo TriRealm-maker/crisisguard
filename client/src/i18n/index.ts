@@ -10,6 +10,7 @@ const resources = {
         prediction: 'Prediction',
         medical: 'Medical',
         guides: 'Guides',
+        settings: 'Settings',
       },
       dashboard: {
         title: 'Current Location',
@@ -98,6 +99,7 @@ const resources = {
         prediction: 'भविष्यवाणी',
         medical: 'चिकित्सा',
         guides: 'गाइड',
+        settings: 'सेटिंग्स',
       },
       dashboard: {
         title: 'वर्तमान स्थान',
@@ -186,6 +188,7 @@ const resources = {
         prediction: 'Predicción',
         medical: 'Médico',
         guides: 'Guías',
+        settings: 'Configuración',
       },
       dashboard: {
         title: 'Ubicación Actual',
@@ -274,6 +277,7 @@ const resources = {
         prediction: 'Prédiction',
         medical: 'Médical',
         guides: 'Guides',
+        settings: 'Paramètres',
       },
       dashboard: {
         title: 'Position Actuelle',
@@ -362,6 +366,7 @@ const resources = {
         prediction: 'التنبؤ',
         medical: 'طبي',
         guides: 'الأدلة',
+        settings: 'الإعدادات',
       },
       dashboard: {
         title: 'الموقع الحالي',

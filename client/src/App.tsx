@@ -4,11 +4,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { GeolocationProvider, useGeolocation } from './context/GeolocationContext';
 import { Navbar } from './components/Navbar';
+import { SOSButton } from './components/SOSButton';
 import { Dashboard } from './pages/Dashboard';
 import { MapPage } from './pages/MapPage';
 import { PredictionPage } from './pages/PredictionPage';
 import { MedicalPage } from './pages/MedicalPage';
 import { GuidesPage } from './pages/GuidesPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
 import { SharedProfilePage } from './pages/SharedProfilePage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
@@ -59,6 +61,7 @@ const AnimatedRoutes = () => {
         <Route path="/prediction" element={<PageWrapper><PredictionPageContent /></PageWrapper>} />
         <Route path="/medical" element={<PageWrapper><MedicalPage /></PageWrapper>} />
         <Route path="/guides" element={<PageWrapper><GuidesPage /></PageWrapper>} />
+        <Route path="/settings" element={<PageWrapper><SettingsPage /></PageWrapper>} />
         <Route path="/shared/:token" element={<PageWrapper><SharedProfilePage /></PageWrapper>} />
       </Routes>
     </AnimatePresence>
@@ -113,6 +116,7 @@ const AppContent = () => {
     <GeolocationProvider>
       <div className="min-h-screen bg-background-light dark:bg-background-dark pb-20 md:pb-0">
         <Navbar />
+        <SOSButton />
         <main className="max-w-7xl mx-auto px-4 py-4 md:pt-20">
           <AnimatedRoutes />
         </main>

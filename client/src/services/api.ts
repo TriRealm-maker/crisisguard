@@ -145,4 +145,29 @@ export const api = {
       return res.json();
     },
   },
+
+  sos: {
+    getContacts: async () => {
+      const res = await fetch(`${API_BASE}/sos/contacts`, {
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
+    saveContacts: async (contacts: { name: string; phone: string; email: string }[]) => {
+      const res = await fetch(`${API_BASE}/sos/contacts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ contacts }),
+      });
+      return res.json();
+    },
+    sendSOS: async (lat: number, lng: number) => {
+      const res = await fetch(`${API_BASE}/sos/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ lat, lng, timestamp: new Date().toISOString() }),
+      });
+      return res.json();
+    },
+  },
 };
