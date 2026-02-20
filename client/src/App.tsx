@@ -11,6 +11,9 @@ import { MedicalPage } from './pages/MedicalPage';
 import { GuidesPage } from './pages/GuidesPage';
 import { LoginPage } from './pages/LoginPage';
 import { SharedProfilePage } from './pages/SharedProfilePage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import './i18n';
 
 const pageVariants = {
@@ -62,6 +65,26 @@ const AnimatedRoutes = () => {
   );
 };
 
+const AuthRoutes = () => {
+  const location = useLocation();
+  const publicRoutes = ['/verify-email', '/forgot-password', '/reset-password'];
+  const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
+
+  if (isPublicRoute) {
+    return (
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/verify-email" element={<PageWrapper><VerifyEmailPage /></PageWrapper>} />
+          <Route path="/forgot-password" element={<PageWrapper><ForgotPasswordPage /></PageWrapper>} />
+          <Route path="/reset-password" element={<PageWrapper><ResetPasswordPage /></PageWrapper>} />
+        </Routes>
+      </AnimatePresence>
+    );
+  }
+
+  return null;
+};
+
 const AppContent = () => {
   const { user, loading } = useAuth();
 
@@ -78,7 +101,12 @@ const AppContent = () => {
   }
 
   if (!user) {
-    return <LoginPage />;
+    return (
+      <>
+        <AuthRoutes />
+        <LoginPage />
+      </>
+    );
   }
 
   return (

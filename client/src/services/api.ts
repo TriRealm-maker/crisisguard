@@ -32,6 +32,34 @@ export const api = {
       });
       return res.json();
     },
+    verifyEmail: async (token: string) => {
+      const res = await fetch(`${API_BASE}/auth/verify-email?token=${encodeURIComponent(token)}`);
+      return res.json();
+    },
+    resendVerification: async (email: string) => {
+      const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return res.json();
+    },
+    forgotPassword: async (email: string) => {
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return res.json();
+    },
+    resetPassword: async (token: string, newPassword: string) => {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, newPassword }),
+      });
+      return res.json();
+    },
   },
 
   weather: {

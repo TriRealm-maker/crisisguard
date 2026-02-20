@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { api } from '../services/api';
 
 export const LoginPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -9,29 +10,71 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
-      const result = isLogin 
-        ? await login(email, password)
-        : await register(email, password, name);
-      
-      if (result.success) {
-        navigate('/');
+      if (isLogin) {
+        const result = await login(email, password);
+        
+        if (result.success) {
+          navigate('/');
+        } else {
+          if (result.message?.includes('verify')) {
+            setError(result.message);
+          } else {
+            setError(result.message || 'Authentication failed');
+          }
+        }
       } else {
-        setError(result.message || 'Authentication failed');
+        const result = await register(email, password, name);
+        
+        if (result.success) {
+          navigate('/');
+        } else if (result.message?.includes('check your email')) {
+          setSuccessMessage(result.message);
+          setIsLogin(true);
+          setPassword('');
+        } else {
+          setError(result.message || 'Registration failed');
+        }
       }
     } catch {
       setError('An error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email address first');
+      return;
+    }
+    
+    setResending(true);
+    setError('');
+    
+    try {
+      const result = await api.auth.resendVerification(email);
+      if (result.message) {
+        setSuccessMessage(result.message);
+      } else {
+        setError(result.message || 'Failed to resend verification email');
+      }
+    } catch {
+      setError('An error occurred');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -51,9 +94,24 @@ export const LoginPage = () => {
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h2>
 
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-600 dark:text-green-400 text-sm">
+              {successMessage}
+            </div>
+          )}
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
               {error}
+              {error.includes('verify') && (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={resending}
+                  className="ml-2 underline font-semibold hover:text-red-800 dark:hover:text-red-300"
+                >
+                  {resending ? 'Sending...' : 'Resend email'}
+                </button>
+              )}
             </div>
           )}
 
@@ -106,9 +164,20 @@ export const LoginPage = () => {
             </button>
           </form>
 
+          {isLogin && (
+            <div className="mt-4 text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+          )}
+
           <div className="mt-6 text-center">
             <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
               className="text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 text-sm"
             >
               {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}

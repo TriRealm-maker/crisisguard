@@ -13,77 +13,108 @@ const getGroq = () => {
   return groq;
 };
 
+const stripMarkdown = (text: string): string => {
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1');
+};
+
 interface PredictionResult {
   riskLevel: string;
   threats: string[];
   recommendation: string;
 }
 
+interface PredictionData {
+  riskLevel: string;
+  threats: { name: string; description: string }[];
+  recommendations: string[];
+}
+
 export const getDisasterPrediction = async (
   lat: number,
   lng: number,
   weather?: { temperature: string; condition: string }
-): Promise<string> => {
+): Promise<PredictionData> => {
   const prompt = `You are a disaster prediction AI assistant. Analyze the following location and weather data to assess natural disaster risks.
 
 Location: Latitude ${lat}, Longitude ${lng}
 Date: ${new Date().toLocaleDateString()}
 Weather: ${weather?.temperature || 'Unknown'}, ${weather?.condition || 'Unknown conditions'}
 
-Provide a concise risk assessment with:
-1. Risk Level (Low/Medium/High/Critical)
-2. Top 3 potential threats for this area (e.g., earthquake, flood, wildfire, hurricane, tornado, tsunami, landslides)
-3. Brief preparation recommendation
+Respond ONLY with valid JSON in this exact format:
+{
+  "riskLevel": "Low" | "Medium" | "High" | "Critical",
+  "threats": [
+    { "name": "ThreatName", "description": "Brief description of the threat" }
+  ],
+  "recommendations": [
+    "Recommendation 1",
+    "Recommendation 2",
+    "Recommendation 3"
+  ]
+}
 
-Format your response as markdown with clear sections. Keep it brief and actionable.`;
+Include 2-4 threats relevant to this location and 3-5 actionable recommendations.`;
 
   try {
     const completion = await getGroq().chat.completions.create({
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
+      temperature: 0.1,
+      max_tokens: 2048,
     });
 
-    return completion.choices[0]?.message?.content || getFallbackPrediction(lat, lng);
+    const content = completion.choices[0]?.message?.content;
+    if (content) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          riskLevel: parsed.riskLevel || 'Medium',
+          threats: Array.isArray(parsed.threats) ? parsed.threats : [],
+          recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+        };
+      }
+    }
+    return getFallbackPrediction(lat, lng);
   } catch (error) {
     console.error('Groq API error:', error);
     return getFallbackPrediction(lat, lng);
   }
 };
 
-const getFallbackPrediction = (lat: number, lng: number): string => {
+const getFallbackPrediction = (lat: number, lng: number): PredictionData => {
   const month = new Date().getMonth();
   const isSummer = month >= 5 && month <= 8;
   const isWinter = month >= 11 || month <= 2;
 
-  let risks = '## Risk Assessment\n\n';
-  risks += '**Overall Risk Level:** Medium\n\n';
-  risks += '### Potential Threats\n';
-  risks += '- 🌧️ **Flooding** - Check local drainage systems\n';
-  risks += '- 🔥 **Wildfire** - Dry conditions can spark fires\n';
-  risks += '- 🌡️ **Extreme Heat** - Stay hydrated during summer\n';
+  const threats: { name: string; description: string }[] = [
+    { name: 'Flooding', description: 'Check local drainage systems and stay informed about water levels' },
+    { name: 'Wildfire', description: 'Dry conditions can spark fires - be cautious with open flames' },
+    { name: 'Extreme Heat', description: 'Stay hydrated and avoid prolonged sun exposure' },
+  ];
 
   if (isSummer) {
-    risks += '- 🌀 **Hurricane** - Hurricane season (June-November)\n';
+    threats.push({ name: 'Hurricane', description: 'Hurricane season (June-November) - prepare for strong winds and flooding' });
   }
 
   if (isWinter) {
-    risks += '- ❄️ **Winter Storm** - Prepare for cold weather emergencies\n';
+    threats.push({ name: 'Winter Storm', description: 'Prepare for cold weather emergencies with heating and supplies' });
   }
 
   if (lat > 35 || lat < -35) {
-    risks += '- 🌊 **Tsunami** - Coastal area, know evacuation routes\n';
+    threats.push({ name: 'Tsunami', description: 'Coastal area - know evacuation routes to higher ground' });
   }
 
-  risks += '\n### Recommendations\n';
-  risks += '- Keep emergency kit ready\n';
-  risks += '- Monitor local weather alerts\n';
-  risks += '- Know your evacuation routes\n';
-  risks += '- Keep important documents secure\n';
-
-  risks += '\n\n---\n*Note: This is a basic assessment. For accurate predictions, ensure GROQ_API_KEY is configured.*';
-
-  return risks;
+  return {
+    riskLevel: 'Medium',
+    threats,
+    recommendations: [
+      'Keep emergency kit ready with water, food, and supplies',
+      'Monitor local weather alerts and emergency broadcasts',
+      'Know your evacuation routes and shelter locations',
+      'Keep important documents in a secure, waterproof container',
+    ],
+  };
 };
 
 export const getDisasterGuide = async (disaster: string): Promise<string> => {
@@ -102,9 +133,11 @@ Use relevant emojis for every bullet point. Make it visually easy to scan during
       model: 'llama-3.1-8b-instant',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.5,
+      max_tokens: 2048,
     });
 
-    return completion.choices[0]?.message?.content || getFallbackGuide(disaster);
+    const content = completion.choices[0]?.message?.content || getFallbackGuide(disaster);
+    return stripMarkdown(content);
   } catch (error) {
     console.error('Groq guide error:', error);
     return getFallbackGuide(disaster);

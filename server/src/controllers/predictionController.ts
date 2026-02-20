@@ -15,7 +15,7 @@ export const getPrediction = async (req: Request, res: Response): Promise<void> 
       parseFloat(lng as string)
     );
 
-    res.json({ prediction });
+    res.json(prediction);
   } catch (error) {
     res.status(500).json({ message: 'Error generating prediction', error: (error as Error).message });
   }
