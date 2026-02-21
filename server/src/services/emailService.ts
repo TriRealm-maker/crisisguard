@@ -9,7 +9,7 @@ const sendEmail = async (to: string, subject: string, htmlContent: string) => {
       'content-type': 'application/json'
     } as Record<string, string>,
     body: JSON.stringify({
-      sender: { name: 'CrisisGuard AI', email: process.env.EMAIL_USER },
+      sender: { name: 'CrisisGuard', email: process.env.EMAIL_USER },
       to: [{ email: to }],
       subject: subject,
       htmlContent: htmlContent
