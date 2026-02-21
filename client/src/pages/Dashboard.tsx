@@ -168,27 +168,27 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
     return match ? parseInt(match[1]) : 0;
   };
 
-  const handleBridgefy = () => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const isAndroid = userAgent.includes('android');
-    const isIOS = /iphone|ipad|ipod/.test(userAgent);
+const handleBitchat = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isAndroid = userAgent.includes('android');
+  const isIOS = /iphone|ipad|ipod/.test(userAgent);
 
-    if (isAndroid) {
-      window.location.href = 'intent://scan/#Intent;scheme=bridgefy;package=me.bridgefy.main;S.browser_fallback_url=https://play.google.com/store/apps/details?id=me.bridgefy.main;end';
-    } else if (isIOS) {
-      const appStoreUrl = 'https://apps.apple.com/app/bridgefy/id975776347';
-      const appUrl = 'bridgefy://';
-      
-      const timeout = setTimeout(() => {
-        window.location.href = appStoreUrl;
-      }, 1500);
-
-      window.addEventListener('blur', () => clearTimeout(timeout), { once: true });
-      window.location.href = appUrl;
-    } else {
-      window.open('https://bridgefy.me', '_blank');
-    }
-  };
+  if (isAndroid) {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = 'bitchat.droid://';
+    document.body.appendChild(iframe);
+    
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      window.location.href = 'https://play.google.com/store/apps/details?id=com.bitchat.droid&hl=en_IN';
+    }, 2000);
+  } else if (isIOS) {
+    window.location.href = 'https://apps.apple.com/us/app/bitchat-mesh/id6748219622';
+  } else {
+    window.location.href = 'https://play.google.com/store/apps/details?id=com.bitchat.droid&hl=en_IN';
+  }
+};
 
   if (!coords) {
     return (
@@ -322,18 +322,19 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
               </div>
               <div>
                 <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                  No internet? Stay connected with Bridgefy
+                  No internet? Message with Bitchat
                 </h4>
                 <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-                  Works offline via Bluetooth mesh networking between nearby devices.
+                  Decentralized P2P messaging over Bluetooth mesh — no servers, no internet needed
                 </p>
               </div>
             </div>
             <button 
-              onClick={handleBridgefy}
+              onClick={handleBitchat}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+              aria-label="Get Bitchat"
             >
-              Get Bridgefy
+              Get Bitchat
             </button>
           </div>
         </GlassCard>
