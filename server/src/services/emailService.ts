@@ -1,12 +1,23 @@
+import dns from 'dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import nodemailer from 'nodemailer';
 
 const createTransporter = () => nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS
   },
-});
+  tls: {
+    rejectUnauthorized: false
+  },
+  dnsResolveMx: false,
+  socketTimeout: 10000,
+  connectionTimeout: 10000
+} as nodemailer.TransportOptions);
 
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
