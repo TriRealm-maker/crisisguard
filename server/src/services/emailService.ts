@@ -1,28 +1,31 @@
-import nodemailer from 'nodemailer';
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
-const createTransporter = () => {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  } as nodemailer.TransportOptions);
-
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error('❌ Email transporter verification failed:', error.message);
-    } else {
-      console.log('✅ Email transporter is ready');
-    }
+const sendEmail = async (to: string, subject: string, htmlContent: string) => {
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': process.env.BREVO_API_KEY || '',
+      'content-type': 'application/json'
+    } as Record<string, string>,
+    body: JSON.stringify({
+      sender: { name: 'CrisisGuard AI', email: process.env.EMAIL_USER },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: htmlContent
+    })
   });
 
-  return transporter;
+  if (!response.ok) {
+    const error = await response.json() as { message?: string };
+    console.error('❌ Brevo API error:', error);
+    throw new Error(`Email failed: ${error.message}`);
+  }
+
+  console.log(`✅ Email sent to ${to}`);
 };
 
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+console.log('Email service configured with Brevo HTTP API');
 
 const verificationEmailHtml = (name: string, verifyLink: string) => `
 <!DOCTYPE html>
@@ -115,16 +118,10 @@ const passwordResetEmailHtml = (name: string, resetLink: string) => `
 `;
 
 export const sendVerificationEmail = async (email: string, name: string, token: string): Promise<void> => {
-  const transporter = createTransporter();
   const verifyLink = `${clientUrl}/verify-email?token=${token}`;
   
   try {
-    await transporter.sendMail({
-      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Verify your email - CrisisGuard AI',
-      html: verificationEmailHtml(name, verifyLink),
-    });
+    await sendEmail(email, 'Verify your email - CrisisGuard AI', verificationEmailHtml(name, verifyLink));
     console.log(`✅ Verification email sent to ${email}`);
   } catch (error) {
     console.error(`❌ Failed to send verification email to ${email}:`, (error as Error).message);
@@ -133,16 +130,10 @@ export const sendVerificationEmail = async (email: string, name: string, token: 
 };
 
 export const sendPasswordResetEmail = async (email: string, name: string, token: string): Promise<void> => {
-  const transporter = createTransporter();
   const resetLink = `${clientUrl}/reset-password?token=${token}`;
   
   try {
-    await transporter.sendMail({
-      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: 'Reset your password - CrisisGuard AI',
-      html: passwordResetEmailHtml(name, resetLink),
-    });
+    await sendEmail(email, 'Reset your password - CrisisGuard AI', passwordResetEmailHtml(name, resetLink));
     console.log(`✅ Password reset email sent to ${email}`);
   } catch (error) {
     console.error(`❌ Failed to send password reset email to ${email}:`, (error as Error).message);
@@ -203,15 +194,8 @@ export const sendSOSEmail = async (
   mapsLink: string,
   timestamp: string
 ): Promise<void> => {
-  const transporter = createTransporter();
-  
   try {
-    await transporter.sendMail({
-      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-      to: recipientEmail,
-      subject: '🆘 SOS ALERT',
-      html: sosEmailHtml(userName, lat, lng, mapsLink, timestamp),
-    });
+    await sendEmail(recipientEmail, '🆘 SOS ALERT', sosEmailHtml(userName, lat, lng, mapsLink, timestamp));
     console.log(`✅ SOS alert email sent to ${recipientEmail}`);
   } catch (error) {
     console.error(`❌ Failed to send SOS email to ${recipientEmail}:`, (error as Error).message);
