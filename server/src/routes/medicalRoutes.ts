@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import multer from 'multer';
+import { Router, Request, Response, NextFunction } from 'express';
+import multer, { MulterError } from 'multer';
 import path from 'path';
 import { 
   getMedicalProfile, 
@@ -36,9 +36,17 @@ const upload = multer({
   },
 });
 
+const handleMulterError = (err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (err instanceof MulterError || err.message.includes('Only images and PDF files are allowed')) {
+    res.status(400).json({ message: err.message });
+    return;
+  }
+  next(err);
+};
+
 router.get('/profile', authMiddleware, getMedicalProfile);
 router.put('/profile', authMiddleware, updateMedicalProfile);
-router.post('/upload', authMiddleware, upload.single('file'), addMedicalFile);
+router.post('/upload', authMiddleware, upload.single('file'), handleMulterError, addMedicalFile);
 router.delete('/files/:fileId', authMiddleware, deleteMedicalFile);
 router.post('/share', authMiddleware, generateShareLink);
 router.get('/share/:token', getSharedProfile);

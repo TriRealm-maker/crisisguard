@@ -48,19 +48,21 @@ export function SOSButton() {
     try {
       const response = await api.sos.sendSOS(coords.lat, coords.lng);
       
-      if (response.results) {
-        const successCount = response.results.filter((r: { success: boolean }) => r.success).length;
-        if (successCount > 0) {
-          setState('success');
-        } else {
-          setErrorMessage('Failed to send to all contacts');
-          setState('error');
-        }
+      const successFromResults = response.results && 
+        Array.isArray(response.results) && 
+        response.results.filter((r: { success: boolean }) => r.success).length > 0;
+      
+      const messageMatch = response.message && response.message.match(/(\d+)\s+succeeded/);
+      const successFromMessage = messageMatch && parseInt(messageMatch[1], 10) > 0;
+
+      if (successFromResults || successFromMessage) {
+        setState('success');
       } else if (response.message && response.message.includes('No emergency contacts')) {
         setErrorMessage('No emergency contacts configured');
         setState('error');
       } else {
-        setState('success');
+        setErrorMessage('Failed to send to all contacts');
+        setState('error');
       }
     } catch (error) {
       setErrorMessage('Failed to send SOS');

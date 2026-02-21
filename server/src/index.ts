@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import express, { Express } from 'express';
+import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import connectDB from './config/db';
@@ -61,6 +61,11 @@ app.use('/api/sos', sosRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'CrisisGuard API is running' });
+});
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal server error', error: err.message });
 });
 
 const PORT = process.env.PORT || 5000;
