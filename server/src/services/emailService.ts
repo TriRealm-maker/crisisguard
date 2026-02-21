@@ -1,23 +1,29 @@
-import dns from 'dns';
-dns.setDefaultResultOrder('ipv4first');
-
 import nodemailer from 'nodemailer';
 
-const createTransporter = () => nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  dnsResolveMx: false,
-  socketTimeout: 10000,
-  connectionTimeout: 10000
-} as nodemailer.TransportOptions);
+const createTransporter = () => {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email transporter verification failed:', error.message);
+    } else {
+      console.log('✅ Email transporter is ready');
+    }
+  });
+
+  return transporter;
+};
 
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
 
@@ -115,24 +121,36 @@ export const sendVerificationEmail = async (email: string, name: string, token: 
   const transporter = createTransporter();
   const verifyLink = `${clientUrl}/verify-email?token=${token}`;
   
-  await transporter.sendMail({
-    from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Verify your email - CrisisGuard AI',
-    html: verificationEmailHtml(name, verifyLink),
-  });
+  try {
+    await transporter.sendMail({
+      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Verify your email - CrisisGuard AI',
+      html: verificationEmailHtml(name, verifyLink),
+    });
+    console.log(`✅ Verification email sent to ${email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send verification email to ${email}:`, (error as Error).message);
+    throw error;
+  }
 };
 
 export const sendPasswordResetEmail = async (email: string, name: string, token: string): Promise<void> => {
   const transporter = createTransporter();
   const resetLink = `${clientUrl}/reset-password?token=${token}`;
   
-  await transporter.sendMail({
-    from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: 'Reset your password - CrisisGuard AI',
-    html: passwordResetEmailHtml(name, resetLink),
-  });
+  try {
+    await transporter.sendMail({
+      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Reset your password - CrisisGuard AI',
+      html: passwordResetEmailHtml(name, resetLink),
+    });
+    console.log(`✅ Password reset email sent to ${email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send password reset email to ${email}:`, (error as Error).message);
+    throw error;
+  }
 };
 
 const sosEmailHtml = (userName: string, lat: number, lng: number, mapsLink: string, timestamp: string) => `
@@ -190,10 +208,16 @@ export const sendSOSEmail = async (
 ): Promise<void> => {
   const transporter = createTransporter();
   
-  await transporter.sendMail({
-    from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
-    to: recipientEmail,
-    subject: '🆘 SOS ALERT',
-    html: sosEmailHtml(userName, lat, lng, mapsLink, timestamp),
-  });
+  try {
+    await transporter.sendMail({
+      from: `"CrisisGuard AI" <${process.env.EMAIL_USER}>`,
+      to: recipientEmail,
+      subject: '🆘 SOS ALERT',
+      html: sosEmailHtml(userName, lat, lng, mapsLink, timestamp),
+    });
+    console.log(`✅ SOS alert email sent to ${recipientEmail}`);
+  } catch (error) {
+    console.error(`❌ Failed to send SOS email to ${recipientEmail}:`, (error as Error).message);
+    throw error;
+  }
 };
