@@ -12,6 +12,7 @@ import {
   MapPinIcon,
   HeartIcon,
   ArrowRightIcon,
+  SignalIcon,
 } from '@heroicons/react/24/solid';
 
 const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY;
@@ -167,6 +168,26 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
     return match ? parseInt(match[1]) : 0;
   };
 
+  const handleBridgefyClick = () => {
+    const userAgent = navigator.userAgent;
+    const isAndroid = /Android/i.test(userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+
+    if (isAndroid || isIOS) {
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=me.bridgefy.main';
+      const bridgefyUrl = 'bridgefy://';
+      
+      const timeout = setTimeout(() => {
+        window.location.href = playStoreUrl;
+      }, 1500);
+      
+      window.location.href = bridgefyUrl;
+      clearTimeout(timeout);
+    } else {
+      window.location.href = 'https://bridgefy.me';
+    }
+  };
+
   if (!coords) {
     return (
       <div className="p-8 text-center bg-surface-light dark:bg-surface-dark rounded-2xl border border-border-light dark:border-border-dark">
@@ -288,6 +309,32 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
             )}
           </div>
         </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <GlassCard hover className="p-5 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-purple-500/20">
+                <SignalIcon className="h-6 w-6 text-purple-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark">
+                  No internet? Stay connected with Bridgefy
+                </h4>
+                <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
+                  Works offline via Bluetooth mesh networking between nearby devices.
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={handleBridgefyClick}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
+            >
+              Get Bridgefy
+            </button>
+          </div>
+        </GlassCard>
       </motion.div>
 
       <motion.div variants={itemVariants}>
