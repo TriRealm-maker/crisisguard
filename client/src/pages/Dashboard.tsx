@@ -174,15 +174,7 @@ const handleBitchat = () => {
   const isIOS = /iphone|ipad|ipod/.test(userAgent);
 
   if (isAndroid) {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = 'bitchat.droid://';
-    document.body.appendChild(iframe);
-    
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-      window.location.href = 'https://play.google.com/store/apps/details?id=com.bitchat.droid&hl=en_IN';
-    }, 2000);
+    window.location.href = 'intent://open/#Intent;scheme=bitchat.droid;package=com.bitchat.droid;end';
   } else if (isIOS) {
     window.location.href = 'https://apps.apple.com/us/app/bitchat-mesh/id6748219622';
   } else {
