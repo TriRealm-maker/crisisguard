@@ -168,23 +168,25 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
     return match ? parseInt(match[1]) : 0;
   };
 
-  const handleBridgefyClick = () => {
-    const userAgent = navigator.userAgent;
-    const isAndroid = /Android/i.test(userAgent);
-    const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+  const handleBridgefy = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isAndroid = userAgent.includes('android');
+    const isIOS = /iphone|ipad|ipod/.test(userAgent);
 
-    if (isAndroid || isIOS) {
-      const playStoreUrl = 'https://play.google.com/store/apps/details?id=me.bridgefy.main';
-      const bridgefyUrl = 'bridgefy://';
+    if (isAndroid) {
+      window.location.href = 'intent://scan/#Intent;scheme=bridgefy;package=me.bridgefy.main;S.browser_fallback_url=https://play.google.com/store/apps/details?id=me.bridgefy.main;end';
+    } else if (isIOS) {
+      const appStoreUrl = 'https://apps.apple.com/app/bridgefy/id975776347';
+      const appUrl = 'bridgefy://';
       
       const timeout = setTimeout(() => {
-        window.location.href = playStoreUrl;
+        window.location.href = appStoreUrl;
       }, 1500);
-      
-      window.location.href = bridgefyUrl;
-      clearTimeout(timeout);
+
+      window.addEventListener('blur', () => clearTimeout(timeout), { once: true });
+      window.location.href = appUrl;
     } else {
-      window.location.href = 'https://bridgefy.me';
+      window.open('https://bridgefy.me', '_blank');
     }
   };
 
@@ -328,7 +330,7 @@ export const Dashboard = ({ coords, usingFallback = false, loading = false }: Pr
               </div>
             </div>
             <button 
-              onClick={handleBridgefyClick}
+              onClick={handleBridgefy}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
             >
               Get Bridgefy
