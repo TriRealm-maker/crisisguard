@@ -306,30 +306,30 @@ const handleBitchat = () => {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <GlassCard hover className="p-5 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+        <div className="bg-black border-2 border-dashed border-white/60 rounded-lg p-4 md:p-5 scanlines">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-xl bg-purple-500/20">
-                <SignalIcon className="h-6 w-6 text-purple-400" />
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 flex items-center justify-center bg-white/10 rounded border border-white/30">
+                <SignalIcon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h4 className="font-semibold text-text-primary-light dark:text-text-primary-dark">
-                  No internet? Message with Bitchat
+                <h4 className="font-dotmatrix text-xl md:text-2xl text-white tracking-wider">
+                  BITCHAT — OFFLINE MESH MESSAGING<span className="animate-blink">_</span>
                 </h4>
-                <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">
-                  Decentralized P2P messaging over Bluetooth mesh — no servers, no internet needed
+                <p className="font-dotmatrix text-sm text-white/60 mt-1 tracking-wide">
+                  Peer-to-peer • Bluetooth mesh • No internet required
                 </p>
               </div>
             </div>
             <button 
               onClick={handleBitchat}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap"
-              aria-label="Get Bitchat"
+              className="px-5 py-2.5 bg-black border-2 border-white font-dotmatrix text-white text-lg tracking-wider hover:bg-white hover:text-black transition-colors duration-150 whitespace-nowrap"
+              aria-label="Launch Bitchat"
             >
-              Get Bitchat
+              LAUNCH BITCHAT
             </button>
           </div>
-        </GlassCard>
+        </div>
       </motion.div>
 
       <motion.div variants={itemVariants}>
