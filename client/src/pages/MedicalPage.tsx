@@ -46,7 +46,15 @@ export const MedicalPage = () => {
 
   useEffect(() => {
     api.medical.getProfile()
-      .then((data) => setProfile(data))
+      .then((data) => {
+        if (data && typeof data === 'object') {
+          setProfile({
+            ...emptyProfile,
+            ...data,
+            files: Array.isArray(data.files) ? data.files : [],
+          });
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -63,7 +71,7 @@ export const MedicalPage = () => {
   const handleFileUpload = async (file: File) => {
     const result = await api.medical.uploadFile(file);
     if (result.file) {
-      setProfile(prev => ({ ...prev, files: [...prev.files, result.file] }));
+      setProfile(prev => ({ ...prev, files: [...(prev.files || []), result.file] }));
     }
   };
 
@@ -93,7 +101,7 @@ export const MedicalPage = () => {
 
   const deleteFile = async (fileId: string) => {
     await api.medical.deleteFile(fileId);
-    setProfile(prev => ({ ...prev, files: prev.files.filter(f => f.id !== fileId) }));
+    setProfile(prev => ({ ...prev, files: (prev.files || []).filter(f => f.id !== fileId) }));
   };
 
   const generateShareLink = async () => {
@@ -347,7 +355,7 @@ export const MedicalPage = () => {
               </p>
             </div>
 
-            {profile.files.length > 0 && (
+            {profile.files && profile.files.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                 {profile.files.map((file: MedicalFile) => (
                   <motion.div

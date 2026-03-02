@@ -101,8 +101,12 @@ export const api = {
   medical: {
     getProfile: async () => {
       const res = await fetch(`${API_BASE}/medical/profile`, {
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       });
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || error.error || `Request failed with status ${res.status}`);
+      }
       return res.json();
     },
     updateProfile: async (data: Record<string, unknown>) => {
