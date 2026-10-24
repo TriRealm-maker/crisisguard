@@ -5,7 +5,6 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { api } from '../services/api';
 import { Coordinates, NearbyPlace } from '../types';
-
 import { cn } from '../lib/utils';
 import {
   MagnifyingGlassIcon,
@@ -161,7 +160,6 @@ const ErrorState = ({ errorType, onRetry }: ErrorStateProps) => {
 
 export const MapPage = ({ coords }: Props) => {
   const { t } = useTranslation();
-
   const [places, setPlaces] = useState<NearbyPlace[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorType, setErrorType] = useState<ErrorType>(null);
